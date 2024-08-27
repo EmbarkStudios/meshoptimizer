@@ -255,6 +255,23 @@ static bool canTransformMesh(const Mesh& mesh)
 
 static void detachMesh(Mesh& mesh, cgltf_data* data, const std::vector<NodeInfo>& nodes, const Settings& settings)
 {
+	// Checks whether a node has the extra `wim_is_visible_shape` set to 0.
+	auto node_is_non_visisble_wim_shape = [](cgltf_node* node)
+	{
+		// Should parse json properly. But since we control exactly how the json is written this works fine for us for now.
+		return node->extras.data && std::string(node->extras.data).find("\"wim_is_visible_shape\":0") != std::string::npos;
+	};
+
+	// Don't detach wim collision meshes from its nodes.
+	auto node_is_used_as_non_visible_wim_shape = std::any_of(mesh.nodes.begin(), mesh.nodes.end(), [&](cgltf_node* node)
+	    { return node_is_non_visisble_wim_shape(node); });
+
+	// If its used as a wim invisible shape (collision mesh for example), skip
+	if (node_is_used_as_non_visible_wim_shape)
+	{
+		return;
+	}
+
 	// mesh is already instanced, skip
 	if (!mesh.instances.empty())
 		return;
